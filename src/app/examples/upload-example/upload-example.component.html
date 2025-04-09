@@ -1,0 +1,40 @@
+<div class="example-container">
+    <h1>File Upload Component Examples</h1>
+
+    <div class="example-section">
+        <h2>Basic Upload</h2>
+        <p>
+            Simple file upload with basic configuration. Accepts images, PDFs, and Office documents.
+            Maximum file size is 5MB and up to 10 files can be uploaded.
+        </p>
+        <button mat-raised-button color="primary" (click)="openBasicUploadModal()">
+            <mat-icon>cloud_upload</mat-icon>
+            Open Basic Upload
+        </button>
+    </div>
+
+    <div class="example-section">
+        <h2>Advanced Upload</h2>
+        <p>
+            Advanced file upload with custom validation, server-side validation simulation,
+            and custom preview components for JSON files. Accepts JSON, JPG, PNG, and PDF files.
+        </p>
+        <button mat-raised-button color="accent" (click)="openAdvancedUploadModal()">
+            <mat-icon>upload_file</mat-icon>
+            Open Advanced Upload
+        </button>
+    </div>
+
+    <div *ngIf="selectedFiles.length > 0" class="example-section">
+        <h2>Selected Files</h2>
+        <p>You have selected {{ selectedFiles.length }} file(s):</p>
+
+        <mat-list>
+            <mat-list-item *ngFor="let file of selectedFiles">
+                <mat-icon mat-list-icon>insert_drive_file</mat-icon>
+                <div mat-line>{{ file.name }}</div>
+                <div mat-line>{{ file.type }} - {{ file.size | number }} bytes</div>
+            </mat-list-item>
+        </mat-list>
+    </div>
+</div>

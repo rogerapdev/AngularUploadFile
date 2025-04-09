@@ -1,0 +1,28 @@
+.example-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.example-section {
+    margin-bottom: 32px;
+    padding: 24px;
+    border-radius: 8px;
+    background-color: #f5f5f5;
+
+    h2 {
+        margin-top: 0;
+        color: #333;
+    }
+
+    p {
+        margin-bottom: 16px;
+        color: #666;
+    }
+}
+
+mat-list {
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

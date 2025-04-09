@@ -1,0 +1,16 @@
+<div class="json-preview-container">
+    <div class="json-toolbar">
+        <button mat-button (click)="expandAll()" [disabled]="isExpanded">
+            <mat-icon>unfold_more</mat-icon> Expand All
+        </button>
+        <button mat-button (click)="collapseAll()" [disabled]="!isExpanded">
+            <mat-icon>unfold_less</mat-icon> Collapse All
+        </button>
+        <button mat-button (click)="copyToClipboard()">
+            <mat-icon>content_copy</mat-icon> Copy
+        </button>
+    </div>
+    <div class="json-content">
+        <pre [class.dark-theme]="darkTheme">{{ formattedJson }}</pre>
+    </div>
+</div>

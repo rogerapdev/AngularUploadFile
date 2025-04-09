@@ -1,0 +1,298 @@
+<div class="upload-modal-container" [class.fullscreen]="isFullscreen">
+    <h2 mat-dialog-title>{{ config.title }}</h2>
+
+    <mat-dialog-content>
+        <!-- Drop Zone -->
+        <div class="drop-zone" [class.dragging]="isDragging" (click)="fileInput.click()" (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+            <input #fileInput type="file" hidden multiple [accept]="config.acceptedFormats"
+                (change)="onFileSelected($event)">
+
+            <div class="drop-zone-container">
+                <!-- Statistics area (left) -->
+                <div class="drop-zone-stats">
+                    <div class="stats-row">
+                        <div class="stat-item">
+                            <span class="stat-label">{{ config.texts?.filesLabel || 'Files' }}:</span>
+                            <span class="stat-value">{{ files.length }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">{{ config.texts?.selectedLabel || 'Selected' }}:</span>
+                            <span class="stat-value">{{ selection.selected.length }}</span>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-item">
+                            <span class="stat-label">{{ config.texts?.validLabel || 'Valid' }}:</span>
+                            <span class="stat-value">{{ getValidFilesCount() }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">{{ config.texts?.invalidLabel || 'Invalid' }}:</span>
+                            <span class="stat-value">{{ getInvalidFilesCount() }}</span>
+                        </div>
+                    </div>
+                    <div class="stats-divider"></div>
+                    <div class="stats-row">
+                        <div class="stat-item full-width">
+                            <span class="stat-label">{{ config.texts?.totalSizeLabel || 'Total Size' }}:</span>
+                            <span class="stat-value">{{ formatFileSize(getTotalFileSize()) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main drop area (center) -->
+                <div class="drop-zone-content">
+                    <mat-icon>cloud_upload</mat-icon>
+                    <p>{{ config.texts?.dropZoneText || 'Drop files here' }}</p>
+                    <span>{{ config.texts?.orText || 'or' }}</span>
+                    <button mat-button color="primary">
+                        {{ config.texts?.browseFilesButton || 'Browse Files' }}
+                    </button>
+                </div>
+
+                <!-- Info area (right) -->
+                <div class="drop-zone-info">
+                    <span class="info-item">
+                        <mat-icon class="info-icon">description</mat-icon>
+                        <span class="info-label">{{ config.texts?.acceptedFormatsLabel || 'Accepted Formats' }}:</span>
+                        <span class="info-value">{{ config.acceptedFormats || '*.*' }}</span>
+                    </span>
+
+                    <span class="info-item" *ngIf="config.maxFileSize">
+                        <mat-icon class="info-icon">storage</mat-icon>
+                        <span class="info-label">{{ config.texts?.maxFileSizeLabel || 'Max File Size' }}:</span>
+                        <span class="info-value">{{ formatFileSize(config.maxFileSize) }}</span>
+                    </span>
+
+                    <span class="info-item" *ngIf="config.maxFiles && config.maxFiles > 0">
+                        <mat-icon class="info-icon">filter_none</mat-icon>
+                        <span class="info-label">{{ config.texts?.maxFilesLabel || 'Max Files' }}:</span>
+                        <span class="info-value">{{ config.maxFiles }}</span>
+                    </span>
+
+                    <span class="info-item" *ngIf="config.fileNameFormat">
+                        <mat-icon class="info-icon">text_format</mat-icon>
+                        <span class="info-label">{{ config.texts?.fileNameFormatLabel || 'File Name Format' }}:</span>
+                        <span class="info-value">{{ config.fileNameFormat }}</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="notifications-container" *ngIf="notifications.length > 0">
+            <div *ngFor="let notification of notifications" class="notification" [ngClass]="notification.type">
+                <mat-icon>{{ notification.type === 'error' ? 'error' : 'info' }}</mat-icon>
+                <span>{{ notification.message }}</span>
+                <button mat-icon-button (click)="removeNotification(notification)">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </div>
+        </div>
+
+        <!-- File List -->
+        <div *ngIf="files.length > 0 && !previewFile" class="file-list-container">
+            <!-- Toolbar -->
+            <div class="file-list-toolbar">
+                <div class="toolbar-left">
+                    <button mat-button color="warn" [disabled]="!selection.hasValue()" (click)="removeSelectedFiles()">
+                        <mat-icon>delete</mat-icon> {{ config.texts?.removeSelectedButton || 'Remove Selected' }}
+                    </button>
+                </div>
+                <div class="toolbar-right">
+                    <button mat-button (click)="toggleViewMode()">
+                        <mat-icon>{{ viewMode === 'table' ? 'grid_view' : 'list' }}</mat-icon>
+                        {{ viewMode === 'table' ? (config.texts?.galleryView || 'Gallery View') :
+                        (config.texts?.tableView || 'Table View') }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table View -->
+            <div class="table-container" *ngIf="viewMode === 'table' && files.length > 0">
+                <table mat-table [dataSource]="dataSource" matSort>
+                    <!-- Checkbox Column -->
+                    <ng-container matColumnDef="select">
+                        <th mat-header-cell *matHeaderCellDef>
+                            <mat-checkbox (change)="$event ? masterToggle() : null"
+                                [checked]="selection.hasValue() && isAllSelected()"
+                                [indeterminate]="selection.hasValue() && !isAllSelected()">
+                            </mat-checkbox>
+                        </th>
+                        <td mat-cell *matCellDef="let file">
+                            <mat-checkbox (click)="$event.stopPropagation()"
+                                (change)="$event ? selection.toggle(file) : null"
+                                [checked]="selection.isSelected(file)">
+                            </mat-checkbox>
+                        </td>
+                    </ng-container>
+
+                    <!-- Name Column -->
+                    <ng-container matColumnDef="name">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header> {{ config.texts?.nameHeader || 'Name' }}
+                        </th>
+                        <td mat-cell *matCellDef="let file" [ngClass]="getFileItemClass(file)"
+                            [matTooltip]="getFileTooltip(file)">
+                            <div class="file-name">
+                                <mat-icon>{{ getFileIcon(file) }}</mat-icon>
+                                <span>{{ file.name }}</span>
+                            </div>
+                        </td>
+                    </ng-container>
+
+                    <!-- Type Column -->
+                    <ng-container matColumnDef="type">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header> {{ config.texts?.typeHeader || 'Type' }}
+                        </th>
+                        <td mat-cell *matCellDef="let file"> {{ file.type }} </td>
+                    </ng-container>
+
+                    <!-- Size Column -->
+                    <ng-container matColumnDef="size">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header> {{ config.texts?.sizeHeader || 'Size' }}
+                        </th>
+                        <td mat-cell *matCellDef="let file"> {{ formatFileSize(file.size) }} </td>
+                    </ng-container>
+
+                    <!-- Actions Column -->
+                    <ng-container matColumnDef="actions">
+                        <th mat-header-cell *matHeaderCellDef>{{ config.texts?.actionsHeader || 'Actions' }}</th>
+                        <td mat-cell *matCellDef="let file">
+                            <button mat-icon-button color="primary"
+                                (click)="openPreview(file); $event.stopPropagation();"
+                                [matTooltip]="config.texts?.previewTooltip || 'Preview'">
+                                <mat-icon>visibility</mat-icon>
+                            </button>
+                            <button mat-icon-button color="warn" (click)="removeFile(file); $event.stopPropagation();"
+                                [matTooltip]="config.texts?.removeTooltip || 'Remove'">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+                    <tr mat-row *matRowDef="let file; columns: displayedColumns;" [ngClass]="getFileItemClass(file)"
+                        (click)="selection.toggle(file)">
+                    </tr>
+                </table>
+                <mat-paginator [pageSizeOptions]="[5, 10, 25, 100]" showFirstLastButtons></mat-paginator>
+            </div>
+
+            <!-- Gallery View -->
+            <div *ngIf="viewMode === 'gallery'" class="gallery-view">
+                <div class="gallery-item" *ngFor="let file of files" [ngClass]="getFileItemClass(file)"
+                    [matTooltip]="getFileTooltip(file)">
+                    <div class="gallery-item-content" (click)="hasPreview(file) ? openPreview(file) : null">
+                        <!-- Image preview -->
+                        <div *ngIf="fileUtilsService.isImageFile(file)" class="gallery-item-preview">
+                            <img [src]="file.preview" alt="{{ file.name }}">
+                        </div>
+                        <!-- Icon for non-image files -->
+                        <div *ngIf="!fileUtilsService.isImageFile(file)" class="gallery-item-icon">
+                            <mat-icon>{{ getFileIcon(file) }}</mat-icon>
+                        </div>
+                        <div class="gallery-item-info">
+                            <div class="gallery-item-name">{{ file.name }}</div>
+                            <div class="gallery-item-size">{{ formatFileSize(file.size) }}</div>
+                        </div>
+                    </div>
+                    <div class="gallery-item-actions">
+                        <button mat-icon-button *ngIf="hasPreview(file)" (click)="openPreview(file)">
+                            <mat-icon>visibility</mat-icon>
+                        </button>
+                        <button mat-icon-button color="warn" (click)="removeFile(file)">
+                            <mat-icon>delete</mat-icon>
+                        </button>
+                        <mat-checkbox (click)="$event.stopPropagation()"
+                            (change)="$event ? selection.toggle(file) : null" [checked]="selection.isSelected(file)">
+                        </mat-checkbox>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" *ngIf="isLoading">
+            <mat-spinner diameter="50"></mat-spinner>
+            <p>{{ loadingMessage }}</p>
+        </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+        <button mat-button (click)="dialogRef.close()">
+            {{ config.texts?.cancelButton || 'Cancel' }}
+        </button>
+        <button mat-raised-button color="primary" [disabled]="!canConfirm()" (click)="confirm()">
+            {{ config.texts?.confirmButton || 'Confirm' }}
+        </button>
+    </mat-dialog-actions>
+
+    <!-- Full preview overlay -->
+    <div class="full-preview-overlay" *ngIf="previewFile" (click)="closePreview()">
+        <div class="preview-container" (click)="$event.stopPropagation()">
+            <div class="preview-header">
+                <div class="preview-actions-left">
+                    <button mat-icon-button color="warn" (click)="removeFile(previewFile)" matTooltip="Remove file">
+                        <mat-icon>delete</mat-icon>
+                    </button>
+                </div>
+
+                <h3>{{ previewFile.name }}</h3>
+
+                <div class="preview-actions-right">
+                    <button mat-icon-button (click)="closePreview()" matTooltip="Close preview">
+                        <mat-icon>close</mat-icon>
+                    </button>
+                </div>
+            </div>
+
+            <div class="preview-content">
+                <!-- Image preview -->
+                <div *ngIf="fileUtilsService.isImageFile(previewFile.file)" class="image-preview">
+                    <img [src]="previewFile.preview" alt="{{ previewFile.name }}">
+                </div>
+
+                <!-- PDF preview -->
+                <div *ngIf="fileUtilsService.isPdfFile(previewFile.file)" class="pdf-preview">
+                    <iframe [src]="previewFile.preview" width="100%" height="100%"></iframe>
+                </div>
+
+                <!-- Custom component preview -->
+                <div *ngIf="previewComponentType" class="custom-preview">
+                    <ng-container
+                        *ngComponentOutlet="previewComponentType; injector: previewComponentInjector"></ng-container>
+                </div>
+
+                <!-- Default preview (file info) -->
+                <div *ngIf="!fileUtilsService.isImageFile(previewFile.file) && !fileUtilsService.isPdfFile(previewFile.file) && !previewComponentType"
+                    class="default-preview">
+                    <mat-icon [class.invalid-file]="!previewFile.isValid">{{ getFileIcon(previewFile) }}</mat-icon>
+                    <h4>{{ previewFile.name }}</h4>
+                    <p>{{ formatFileSize(previewFile.size) }}</p>
+                    <p>{{ previewFile.type }}</p>
+                    <p *ngIf="!previewFile.isValid" class="validation-error">
+                        {{ previewFile.validationReason }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Preview pagination -->
+            <div class="preview-pagination" *ngIf="files.length > 1">
+                <button mat-icon-button (click)="navigatePreview(-1)" [disabled]="currentPreviewIndex === 0"
+                    matTooltip="Previous file">
+                    <mat-icon>navigate_before</mat-icon>
+                </button>
+
+                <span class="pagination-info">{{ currentPreviewIndex + 1 }} / {{ files.length }}</span>
+
+                <button mat-icon-button (click)="navigatePreview(1)"
+                    [disabled]="currentPreviewIndex === files.length - 1" matTooltip="Next file">
+                    <mat-icon>navigate_next</mat-icon>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+
+</div>
